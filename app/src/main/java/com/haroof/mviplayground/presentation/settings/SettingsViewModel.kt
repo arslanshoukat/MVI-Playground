@@ -1,7 +1,6 @@
 package com.haroof.mviplayground.presentation.settings
 
 import android.util.Log
-import androidx.lifecycle.viewModelScope
 import com.haroof.mviplayground.base.BaseViewModel
 import com.haroof.mviplayground.domain.AuthManager
 import com.haroof.mviplayground.domain.Navigator
@@ -9,27 +8,27 @@ import com.haroof.mviplayground.domain.Repository
 import com.haroof.mviplayground.presentation.settings.SettingsMvi.Change
 import com.haroof.mviplayground.presentation.settings.SettingsMvi.Intent
 import com.haroof.mviplayground.presentation.settings.SettingsMvi.State
-import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.scan
 
-class SettingsViewModel : BaseViewModel<State, Intent>(State(loading = true)) {
+class SettingsViewModel : BaseViewModel<State, Intent>() {
 
     private val repository = Repository
     private val authManager = AuthManager
     private val navigator = Navigator
 
-    init {
+    fun render(intents: MutableSharedFlow<Intent>): Flow<State> {
         val userNameChange = authManager.getUser().map {
             Change.Username(it.username)
         }
         val feedbackEnabledFlow = repository.isFeedbackFeatureEnabled().map {
             Change.FeedbackEnabled(it)
         }
-        val mappedIntents = intents.receiveAsFlow().map { intent ->
+        val mappedIntents = intents.map { intent ->
             Log.d("Logger", "Received intent: $intent")
 
             when (intent) {
@@ -41,8 +40,7 @@ class SettingsViewModel : BaseViewModel<State, Intent>(State(loading = true)) {
             Change.NoChange
         }
 
-        listOf(userNameChange, feedbackEnabledFlow, mappedIntents)
-            .merge()
+        return merge(userNameChange, feedbackEnabledFlow, mappedIntents)
             .scan(State(loading = true)) { state: State, change: Change ->
                 when (change) {
                     is Change.FeedbackEnabled -> state.copy(feedbackEnabled = change.enabled)
@@ -50,10 +48,6 @@ class SettingsViewModel : BaseViewModel<State, Intent>(State(loading = true)) {
                     Change.NoChange -> state
                 }
             }
-            .onEach {
-                Log.d("Logger", "Received state: $it")
-                _state.value = it
-            }
-            .launchIn(viewModelScope)
+            .distinctUntilChanged()
     }
 }

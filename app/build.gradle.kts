@@ -66,9 +66,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    implementation("androidx.compose.runtime:runtime-livedata:1.7.2")
     val lifecycle_version = "2.8.6"
     implementation("androidx.lifecycle:lifecycle-runtime-compose:$lifecycle_version")
-    
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-android-compiler:2.51.1")
 }
